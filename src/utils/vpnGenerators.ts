@@ -28,8 +28,7 @@ export function downloadClientBlob(content: string, filename: string, mimeType: 
  */
 export function generateWindowsBat(server: VpnServer): string {
   const host = server.sstp_endpoint || `${server.clean_domain || server.ip}:${server.openvpn_port || 443}`;
-  
-  return `@echo off
+  const script = `@echo off
 chcp 65001 >nul
 title VPNGate 1-Click Windows SSTP Connection
 color 0a
@@ -62,6 +61,8 @@ if %ERRORLEVEL% equ 0 (
 echo.
 pause
 `;
+  // Windows batch files must use CRLF line endings
+  return script.replace(/\r?\n/g, '\r\n');
 }
 
 /**
@@ -135,13 +136,46 @@ export function generateAppleMobileConfig(server: VpnServer): string {
 }
 
 /**
+ * Safe base64 -> UTF-8 decoder using Uint8Array / TextDecoder.
+ * Never throws on malformed input (no native atob / InvalidCharacterError).
+ */
+function decodeBase64Utf8(input: string): string {
+  try {
+    if (typeof input !== 'string') return '';
+    const cleaned = input.replace(/[^A-Za-z0-9+/=]/g, '').replace(/=+$/, '');
+    if (!cleaned) return '';
+
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    const lookup = new Uint8Array(128);
+    for (let i = 0; i < alphabet.length; i++) lookup[alphabet.charCodeAt(i)] = i;
+
+    let src = cleaned;
+    if (src.length % 4 === 1) src = src.slice(0, -1); // impossible quantum
+    const bytes = new Uint8Array(Math.floor((src.length * 3) / 4));
+    let b = 0;
+    for (let i = 0; i < src.length; i += 4) {
+      const c1 = lookup[src.charCodeAt(i)] ?? 0;
+      const c2 = lookup[src.charCodeAt(i + 1)] ?? 0;
+      const c3 = i + 2 < src.length ? lookup[src.charCodeAt(i + 2)] ?? 0 : 0;
+      const c4 = i + 3 < src.length ? lookup[src.charCodeAt(i + 3)] ?? 0 : 0;
+      if (b < bytes.length) bytes[b++] = (c1 << 2) | (c2 >> 4);
+      if (b < bytes.length) bytes[b++] = ((c2 & 0x0f) << 4) | (c3 >> 2);
+      if (b < bytes.length) bytes[b++] = ((c3 & 0x03) << 6) | c4;
+    }
+    return new TextDecoder('utf-8').decode(bytes);
+  } catch {
+    return '';
+  }
+}
+
+/**
  * Generate Clean OpenVPN (.ovpn) Configuration
  */
 export function generateCleanOvpn(server: VpnServer): string {
   let certBlock = '';
   if (server.config_b64) {
     try {
-      const decoded = atob(server.config_b64);
+      const decoded = decodeBase64Utf8(server.config_b64);
       const lines = decoded.split('\n');
       const certLines = lines.filter((l) => {
         const tr = l.trim();

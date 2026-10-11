@@ -333,9 +333,27 @@ let serverCache: { servers: VpnServer[]; timestamp: number } = {
   timestamp: 0,
 };
 
+function safeBase64Decode(value: string): string | null {
+  try {
+    if (typeof value !== 'string') return null;
+    // Strip characters that are invalid in base64 so Buffer never mis-decodes
+    let cleaned = value.replace(/[^A-Za-z0-9+/=]/g, '').replace(/=+$/, '');
+    if (cleaned.length === 0) return null;
+    // A leftover single char cannot form a base64 quantum
+    if (cleaned.length % 4 === 1) cleaned = cleaned.slice(0, -1);
+    while (cleaned.length % 4 !== 0) cleaned += '=';
+    const decoded = Buffer.from(cleaned, 'base64');
+    if (decoded.length === 0) return null;
+    return decoded.toString('utf-8');
+  } catch {
+    return null;
+  }
+}
+
 function extractConfigInfo(configB64: string): { port: number; proto: 'TCP' | 'UDP' } {
   try {
-    const raw = Buffer.from(configB64, 'base64').toString('utf-8');
+    const raw = safeBase64Decode(configB64);
+    if (raw === null) return { port: 443, proto: 'TCP' };
     let proto: 'TCP' | 'UDP' = 'UDP';
     let port = 1194;
 
@@ -604,6 +622,42 @@ pause
 `;
 }
 
+interface ProbeResult {
+  reachable: boolean;
+  latency: number;
+}
+
+// Probe a TCP endpoint with strictly guarded socket cleanup: the socket is
+// destroyed exactly once on connect/error/timeout/close and the promise can
+// only settle once, so no sockets or duplicate responses can leak.
+function probeTcp(ip: string, port: number, timeoutMs = 2500): Promise<ProbeResult> {
+  return new Promise((resolve) => {
+    const startTime = Date.now();
+    const socket = new net.Socket();
+    let settled = false;
+
+    const finish = (reachable: boolean): void => {
+      if (settled) return;
+      settled = true;
+      socket.removeAllListeners();
+      socket.setTimeout(0);
+      if (!socket.destroyed) socket.destroy();
+      resolve({ reachable, latency: reachable ? Date.now() - startTime : -1 });
+    };
+
+    try {
+      socket.setTimeout(timeoutMs);
+      socket.once('connect', () => finish(true));
+      socket.once('error', () => finish(false));
+      socket.once('timeout', () => finish(false));
+      socket.once('close', () => finish(false));
+      socket.connect(port, ip);
+    } catch {
+      finish(false);
+    }
+  });
+}
+
 // === API Endpoints ===
 
 app.get('/api/servers', async (req, res) => {
@@ -665,25 +719,13 @@ app.get('/api/test-server', (req, res) => {
     return res.status(400).json({ error: 'IP parameter is required' });
   }
 
-  const startTime = Date.now();
-  const socket = new net.Socket();
-  socket.setTimeout(2500);
-
-  socket.connect(port, ip, () => {
-    const latency = Date.now() - startTime;
-    socket.destroy();
-    res.json({ reachable: true, latency });
-  });
-
-  socket.on('error', () => {
-    socket.destroy();
-    res.json({ reachable: false, latency: -1 });
-  });
-
-  socket.on('timeout', () => {
-    socket.destroy();
-    res.json({ reachable: false, latency: -1 });
-  });
+  probeTcp(ip, port)
+    .then((result) => {
+      if (!res.headersSent) res.json(result);
+    })
+    .catch(() => {
+      if (!res.headersSent) res.json({ reachable: false, latency: -1 });
+    });
 });
 
 // Test batch of servers in parallel via TCP sockets
@@ -707,28 +749,14 @@ app.post('/api/test-batch', async (req, res) => {
         return resolve();
       }
 
-      const startTime = Date.now();
-      const socket = new net.Socket();
-      socket.setTimeout(2500);
-
-      socket.connect(port, ip, () => {
-        const latency = Date.now() - startTime;
-        socket.destroy();
-        results[key] = { reachable: true, latency };
-        resolve();
-      });
-
-      socket.on('error', () => {
-        socket.destroy();
-        results[key] = { reachable: false, latency: -1 };
-        resolve();
-      });
-
-      socket.on('timeout', () => {
-        socket.destroy();
-        results[key] = { reachable: false, latency: -1 };
-        resolve();
-      });
+      probeTcp(ip, port)
+        .then((result) => {
+          results[key] = result;
+        })
+        .catch(() => {
+          results[key] = { reachable: false, latency: -1 };
+        })
+        .finally(() => resolve());
     });
   };
 
