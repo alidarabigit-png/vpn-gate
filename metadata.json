@@ -1,0 +1,6 @@
+{
+  "name": "VPN Gate Smart Connect",
+  "description": "سامانه هوشمند اتصال یک‌کلیکی به VPN، تست پینگ سرورها، دانلود نرم‌افزارهای کلاینت و راهنمای جامع اتصال برای انواع دستگاه‌ها و اینترنت‌ها",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
