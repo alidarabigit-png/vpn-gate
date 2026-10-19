@@ -1,0 +1,83 @@
+name: Update VPN Servers Automatically
+
+on:
+  schedule:
+    - cron: '*/30 * * * *' # اجرا در هر ۳۰ دقیقه
+  workflow_dispatch: # اجازه اجرای دستی از پنل گیت‌هاب
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Fetch and Generate servers.json
+        run: |
+          node -e '
+          const fs = require("fs");
+          async function run() {
+            try {
+              const res = await fetch("http://www.vpngate.net/api/iphone/");
+              const text = await res.text();
+              const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+              let headers = [];
+              const servers = [];
+              
+              for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                if (line.startsWith("*") && line.includes("HostName")) {
+                  headers = line.replace(/^\*+/, "").split(",");
+                  continue;
+                }
+                if (headers.length > 0 && !line.startsWith("*") && line.includes(",")) {
+                  const cols = line.split(",");
+                  if (cols.length >= headers.length) {
+                    const row = {};
+                    headers.forEach((h, idx) => { row[h.trim()] = (cols[idx] || "").trim(); });
+                    const ip = row["IP"];
+                    const config_b64 = row["OpenVPN_ConfigData_Base64"] || "";
+                    if (ip && /^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
+                      servers.push({
+                        hostname: row["HostName"] || ip,
+                        clean_domain: (row["HostName"] || "").includes(".") ? row["HostName"] : `${ip}.opengw.net`,
+                        ip,
+                        score: parseInt(row["Score"] || "0", 10) || 0,
+                        ping: parseInt(row["Ping"] || "0", 10) || 0,
+                        speed: parseInt(row["Speed"] || "0", 10) || 0,
+                        country_long: row["CountryLong"] || "Unknown",
+                        country_short: (row["CountryShort"] || "UN").toUpperCase(),
+                        num_vpn_sessions: parseInt(row["NumVpnSessions"] || "0", 10) || 0,
+                        uptime: parseInt(row["Uptime"] || "0", 10) || 0,
+                        log_type: row["LogType"] || "None",
+                        no_log: (row["LogType"] || "").toLowerCase().includes("none"),
+                        openvpn_port: 443,
+                        openvpn_protocol: "TCP",
+                        config_b64
+                      });
+                    }
+                  }
+                }
+              }
+              fs.writeFileSync("public/servers.json", JSON.stringify({ timestamp: Date.now(), servers }, null, 2));
+              console.log("Successfully generated servers.json with " + servers.length + " servers.");
+            } catch (err) {
+              console.error("Failed to fetch servers:", err);
+              process.exit(1);
+            }
+          }
+          run();
+          '
+
+      - name: Commit and push if servers.json changed
+        run: |
+          git config --global user.name "GitHub Action Bot"
+          git config --global user.email "action@github.com"
+          git add public/servers.json
+          git commit -m "Auto-update servers.json [skip ci]" || exit 0
+          git push
