@@ -1,12 +1,14 @@
 import { VpnServer } from '../types/vpn';
 import { FALLBACK_SERVERS } from '../data/fallbackServers';
 
+// لینک مستقیم فایل servers.json روی گیت‌هاب شما (که فوق‌العاده سریع و بدون فیلتر در ایران باز می‌شود)
+const GITHUB_SERVERS_URL = 'https://raw.githubusercontent.com/alidarabigit-png/vpn-gate/main/public/servers.json';
 const LOCAL_STORAGE_KEY = 'vpngate_cached_servers_v2';
 const CACHE_MAX_AGE_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 export interface FetchResult {
   servers: VpnServer[];
-  source: 'cache' | 'backend' | 'cors_proxy' | 'fallback';
+  source: 'cache' | 'backend' | 'cors_proxy' | 'fallback' | 'github';
   proxyUrl?: string;
 }
 
@@ -142,16 +144,37 @@ export function parseClientVpnGateCsv(csvText: string): VpnServer[] {
 
 /**
  * Smart Multi-Fallback Fetcher:
- * 1. Tries primary backend API `/api/servers` (runs on Cloud Run with backend cache)
- * 2. If backend fails, falls back to direct client-side CORS proxies
- * 3. Caches successful results in localStorage
- * 4. Falls back to localStorage or rich static seed list
+ * 1. Tries GitHub raw servers.json directly (Turbo fast & unblocked in Iran)
+ * 2. Tries backend API `/api/servers`
+ * 3. Falls back to direct client-side CORS proxies
+ * 4. Falls back to localStorage cached data
+ * 5. Ultimate fallback to rich preloaded seed list
  */
 export async function fetchServersSmart(force: boolean = false): Promise<FetchResult> {
-  // 1. Primary: Backend API (on Cloud Run, unblocked outside Iran)
+  // 1. Primary: Direct from GitHub repository JSON (Super fast and unblocked in Iran!)
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
+    const timeoutId = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch(`${GITHUB_SERVERS_URL}?t=${force ? Date.now() : ''}`, {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && Array.isArray(data.servers) && data.servers.length >= 10) {
+        setLocalCachedServers(data.servers);
+        return { servers: data.servers, source: 'github' };
+      }
+    }
+  } catch (err) {
+    console.warn('GitHub servers.json fetch failed, trying backend/proxies...', err);
+  }
+
+  // 2. Secondary: Backend API (on Cloud Run)
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     const res = await fetch(`/api/servers?force=${force}`, { signal: controller.signal });
     clearTimeout(timeoutId);
 
@@ -166,7 +189,7 @@ export async function fetchServersSmart(force: boolean = false): Promise<FetchRe
     console.warn('Backend /api/servers failed, attempting CORS proxies...', err);
   }
 
-  // 2. Client-Side CORS Proxies
+  // 3. Client-Side CORS Proxies
   const TARGET_URL = 'http://www.vpngate.net/api/iphone/';
   const CORS_PROXIES = [
     {
@@ -184,20 +207,12 @@ export async function fetchServersSmart(force: boolean = false): Promise<FetchRe
       url: `https://corsproxy.io/?${encodeURIComponent(TARGET_URL)}`,
       extract: async (r: Response) => r.text(),
     },
-    {
-      name: 'allorigins_json',
-      url: `https://api.allorigins.win/get?url=${encodeURIComponent(TARGET_URL)}`,
-      extract: async (r: Response) => {
-        const json = await r.json();
-        return json.contents || '';
-      },
-    },
   ];
 
   for (const proxy of CORS_PROXIES) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 7000);
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
       const res = await fetch(proxy.url, {
         signal: controller.signal,
       });
@@ -222,12 +237,12 @@ export async function fetchServersSmart(force: boolean = false): Promise<FetchRe
     }
   }
 
-  // 3. Fallback to localStorage cached data
+  // 4. Fallback to localStorage cached data
   const cached = getLocalCachedServers();
   if (cached && cached.length > 0) {
     return { servers: cached, source: 'cache' };
   }
 
-  // 4. Ultimate fallback to rich preloaded servers
+  // 5. Ultimate fallback to rich preloaded servers
   return { servers: FALLBACK_SERVERS, source: 'fallback' };
 }
