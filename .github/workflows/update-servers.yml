@@ -2,20 +2,23 @@ name: Update VPN Servers Automatically
 
 on:
   schedule:
-    - cron: '*/30 * * * *' # اجرا در هر ۳۰ دقیقه
-  workflow_dispatch: # اجازه اجرای دستی از پنل گیت‌هاب
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   update:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Fetch and Generate servers.json
         run: |
@@ -43,9 +46,11 @@ jobs:
                     const ip = row["IP"];
                     const config_b64 = row["OpenVPN_ConfigData_Base64"] || "";
                     if (ip && /^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
+                      const clean_domain = (row["HostName"] || "").includes(".") ? row["HostName"] : `${ip}.opengw.net`;
                       servers.push({
+                        id: `${ip}_443_tcp`,
                         hostname: row["HostName"] || ip,
-                        clean_domain: (row["HostName"] || "").includes(".") ? row["HostName"] : `${ip}.opengw.net`,
+                        clean_domain,
                         ip,
                         score: parseInt(row["Score"] || "0", 10) || 0,
                         ping: parseInt(row["Ping"] || "0", 10) || 0,
@@ -58,12 +63,14 @@ jobs:
                         no_log: (row["LogType"] || "").toLowerCase().includes("none"),
                         openvpn_port: 443,
                         openvpn_protocol: "TCP",
+                        sstp_endpoint: `${clean_domain}:443`,
                         config_b64
                       });
                     }
                   }
                 }
               }
+              fs.mkdirSync("public", { recursive: true });
               fs.writeFileSync("public/servers.json", JSON.stringify({ timestamp: Date.now(), servers }, null, 2));
               console.log("Successfully generated servers.json with " + servers.length + " servers.");
             } catch (err) {
