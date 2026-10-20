@@ -5,7 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: './', // <-- این خط حیاتی است تا هم در APK و هم در GitHub Pages بدون خطا باز شود
+    base: '/vpn-gate/', // نام دقیق ریپوزیتوری شما
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
