@@ -97,20 +97,16 @@ export function scoreL2tpServer(server: VpnServer, operator?: OperatorType): num
  */
 export function sortServersByL2tpQuality(
   servers: VpnServer[],
-  operator?: OperatorType
+  _operator?: OperatorType
 ): VpnServer[] {
+  // Rank by VPN Gate's published score and throughput only; this is not an L2TP compatibility score.
   return [...servers].sort((a, b) => {
-    const scoreA = scoreL2tpServer(a, operator);
-    const scoreB = scoreL2tpServer(b, operator);
-    return scoreB - scoreA;
+    if (b.score !== a.score) return b.score - a.score;
+    if (b.speed !== a.speed) return b.speed - a.speed;
+    return (a.ping || Number.MAX_SAFE_INTEGER) - (b.ping || Number.MAX_SAFE_INTEGER);
   });
 }
 
-/**
- * Fast client-side L2TP evaluation for all servers without false-positive port blocking.
- * Tests standard web ports (443/80) safely, while never marking any server as "offline" / "غیرقابل دسترس"
- * just because a browser fetch was blocked or timed out on VPN ports.
- */
 export async function evaluateAllServersForL2tp(
   servers: VpnServer[],
   operator?: OperatorType,
