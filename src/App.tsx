@@ -11,7 +11,6 @@ import { QuickConnectModal } from './components/QuickConnectModal';
 import { VpnServer } from './types/vpn';
 import {
   downloadClientBlob,
-  generateCleanOvpn,
 } from './utils/vpnGenerators';
 import {
   fetchServersSmart,
