@@ -26,13 +26,8 @@ const PORT = getPort();
 
 app.use(express.json());
 
-// VPNGate mirror endpoints
-const VPNGATE_MIRRORS = [
-  'http://www.vpngate.net/api/iphone/',
-  'https://www.vpngate.net/api/iphone/',
-  'http://219.100.37.242/api/iphone/',
-  'http://130.158.6.80/api/iphone/',
-];
+const GITHUB_SERVERS_URL = 'https://raw.githubusercontent.com/alidarabigit-png/vpn-gate/fix/github-server-feed/public/servers.json';
+const SERVER_FILE = path.resolve(__dirname, 'public', 'servers.json');
 
 export interface VpnServer {
   id?: string;
@@ -54,279 +49,7 @@ export interface VpnServer {
   config_b64: string;
 }
 
-// Fallback high-speed servers if all external mirrors fail
-const FALLBACK_SERVERS: VpnServer[] = [
-  {
-    hostname: 'vg1345982144.opengw.net',
-    clean_domain: 'vg1345982144.opengw.net',
-    ip: '185.220.101.5',
-    score: 9540000,
-    ping: 35,
-    speed: 130000000,
-    country_long: 'Germany',
-    country_short: 'DE',
-    num_vpn_sessions: 88,
-    uptime: 654000,
-    log_type: 'None',
-    no_log: true,
-    openvpn_port: 443,
-    openvpn_protocol: 'TCP',
-    sstp_endpoint: 'vg1345982144.opengw.net:443',
-    config_b64: '',
-  },
-  {
-    hostname: 'vg9821473210.opengw.net',
-    clean_domain: 'vg9821473210.opengw.net',
-    ip: '104.244.72.115',
-    score: 8890000,
-    ping: 42,
-    speed: 110000000,
-    country_long: 'United States',
-    country_short: 'US',
-    num_vpn_sessions: 95,
-    uptime: 432000,
-    log_type: 'None',
-    no_log: true,
-    openvpn_port: 443,
-    openvpn_protocol: 'TCP',
-    sstp_endpoint: 'vg9821473210.opengw.net:443',
-    config_b64: '',
-  },
-  {
-    hostname: 'vg8912304918.opengw.net',
-    clean_domain: 'vg8912304918.opengw.net',
-    ip: '51.15.228.19',
-    score: 7900000,
-    ping: 45,
-    speed: 95000000,
-    country_long: 'Netherlands',
-    country_short: 'NL',
-    num_vpn_sessions: 62,
-    uptime: 515000,
-    log_type: 'None',
-    no_log: true,
-    openvpn_port: 443,
-    openvpn_protocol: 'TCP',
-    sstp_endpoint: 'vg8912304918.opengw.net:443',
-    config_b64: '',
-  },
-  {
-    hostname: 'vg7612983411.opengw.net',
-    clean_domain: 'vg7612983411.opengw.net',
-    ip: '141.95.120.48',
-    score: 7500000,
-    ping: 40,
-    speed: 85000000,
-    country_long: 'France',
-    country_short: 'FR',
-    num_vpn_sessions: 55,
-    uptime: 310000,
-    log_type: 'None',
-    no_log: true,
-    openvpn_port: 443,
-    openvpn_protocol: 'TCP',
-    sstp_endpoint: 'vg7612983411.opengw.net:443',
-    config_b64: '',
-  },
-  {
-    hostname: 'vg6620194821.opengw.net',
-    clean_domain: 'vg6620194821.opengw.net',
-    ip: '185.107.56.200',
-    score: 7100000,
-    ping: 44,
-    speed: 90000000,
-    country_long: 'United Kingdom',
-    country_short: 'GB',
-    num_vpn_sessions: 64,
-    uptime: 410000,
-    log_type: 'None',
-    no_log: true,
-    openvpn_port: 443,
-    openvpn_protocol: 'TCP',
-    sstp_endpoint: 'vg6620194821.opengw.net:443',
-    config_b64: '',
-  },
-  {
-    hostname: 'vg3381920491.opengw.net',
-    clean_domain: 'vg3381920491.opengw.net',
-    ip: '139.162.22.84',
-    score: 6900000,
-    ping: 58,
-    speed: 80000000,
-    country_long: 'Singapore',
-    country_short: 'SG',
-    num_vpn_sessions: 78,
-    uptime: 590000,
-    log_type: 'None',
-    no_log: true,
-    openvpn_port: 443,
-    openvpn_protocol: 'TCP',
-    sstp_endpoint: 'vg3381920491.opengw.net:443',
-    config_b64: '',
-  },
-  {
-    hostname: 'vg4129851230.opengw.net',
-    clean_domain: 'vg4129851230.opengw.net',
-    ip: '210.140.10.35',
-    score: 7200000,
-    ping: 50,
-    speed: 110000000,
-    country_long: 'Korea Republic of',
-    country_short: 'KR',
-    num_vpn_sessions: 95,
-    uptime: 840000,
-    log_type: 'None',
-    no_log: true,
-    openvpn_port: 443,
-    openvpn_protocol: 'TCP',
-    sstp_endpoint: 'vg4129851230.opengw.net:443',
-    config_b64: '',
-  },
-  {
-    hostname: 'vg5501928419.opengw.net',
-    clean_domain: 'vg5501928419.opengw.net',
-    ip: '192.99.144.20',
-    score: 6200000,
-    ping: 52,
-    speed: 75000000,
-    country_long: 'Canada',
-    country_short: 'CA',
-    num_vpn_sessions: 42,
-    uptime: 380000,
-    log_type: 'None',
-    no_log: true,
-    openvpn_port: 443,
-    openvpn_protocol: 'TCP',
-    sstp_endpoint: 'vg5501928419.opengw.net:443',
-    config_b64: '',
-  },
-  {
-    hostname: 'vg2191003724.opengw.net',
-    clean_domain: 'vg2191003724.opengw.net',
-    ip: '219.100.37.240',
-    score: 8459200,
-    ping: 55,
-    speed: 125000000,
-    country_long: 'Japan',
-    country_short: 'JP',
-    num_vpn_sessions: 142,
-    uptime: 1450200,
-    log_type: '2 Weeks',
-    no_log: false,
-    openvpn_port: 443,
-    openvpn_protocol: 'TCP',
-    sstp_endpoint: 'vg2191003724.opengw.net:443',
-    config_b64: '',
-  },
-  {
-    hostname: 'vg1301580688.opengw.net',
-    clean_domain: 'vg1301580688.opengw.net',
-    ip: '130.158.6.88',
-    score: 6320000,
-    ping: 60,
-    speed: 84000000,
-    country_long: 'Japan',
-    country_short: 'JP',
-    num_vpn_sessions: 89,
-    uptime: 920400,
-    log_type: 'None',
-    no_log: true,
-    openvpn_port: 995,
-    openvpn_protocol: 'TCP',
-    sstp_endpoint: 'vg1301580688.opengw.net:995',
-    config_b64: '',
-  },
-  {
-    hostname: 'vg9521748211.opengw.net',
-    clean_domain: 'vg9521748211.opengw.net',
-    ip: '95.217.48.211',
-    score: 8100000,
-    ping: 38,
-    speed: 105000000,
-    country_long: 'Finland',
-    country_short: 'FI',
-    num_vpn_sessions: 51,
-    uptime: 490000,
-    log_type: 'None',
-    no_log: true,
-    openvpn_port: 443,
-    openvpn_protocol: 'TCP',
-    sstp_endpoint: 'vg9521748211.opengw.net:443',
-    config_b64: '',
-  },
-  {
-    hostname: 'vg1941829410.opengw.net',
-    clean_domain: 'vg1941829410.opengw.net',
-    ip: '194.182.94.10',
-    score: 7400000,
-    ping: 46,
-    speed: 88000000,
-    country_long: 'Sweden',
-    country_short: 'SE',
-    num_vpn_sessions: 47,
-    uptime: 360000,
-    log_type: 'None',
-    no_log: true,
-    openvpn_port: 443,
-    openvpn_protocol: 'TCP',
-    sstp_endpoint: 'vg1941829410.opengw.net:443',
-    config_b64: '',
-  },
-  {
-    hostname: 'vg1851931422.opengw.net',
-    clean_domain: 'vg1851931422.opengw.net',
-    ip: '185.193.142.22',
-    score: 7200000,
-    ping: 43,
-    speed: 92000000,
-    country_long: 'Switzerland',
-    country_short: 'CH',
-    num_vpn_sessions: 39,
-    uptime: 290000,
-    log_type: 'None',
-    no_log: true,
-    openvpn_port: 443,
-    openvpn_protocol: 'TCP',
-    sstp_endpoint: 'vg1851931422.opengw.net:443',
-    config_b64: '',
-  },
-  {
-    hostname: 'vg1782382210.opengw.net',
-    clean_domain: 'vg1782382210.opengw.net',
-    ip: '178.238.221.10',
-    score: 6800000,
-    ping: 48,
-    speed: 78000000,
-    country_long: 'Poland',
-    country_short: 'PL',
-    num_vpn_sessions: 36,
-    uptime: 240000,
-    log_type: 'None',
-    no_log: true,
-    openvpn_port: 443,
-    openvpn_protocol: 'TCP',
-    sstp_endpoint: 'vg1782382210.opengw.net:443',
-    config_b64: '',
-  },
-  {
-    hostname: 'vg1031451020.opengw.net',
-    clean_domain: 'vg1031451020.opengw.net',
-    ip: '103.145.10.20',
-    score: 6500000,
-    ping: 65,
-    speed: 82000000,
-    country_long: 'Australia',
-    country_short: 'AU',
-    num_vpn_sessions: 43,
-    uptime: 310000,
-    log_type: 'None',
-    no_log: true,
-    openvpn_port: 443,
-    openvpn_protocol: 'TCP',
-    sstp_endpoint: 'vg1031451020.opengw.net:443',
-    config_b64: '',
-  },
-];
+let serverCache: { servers: VpnServer[]; timestamp: number; source: string } = { servers: [], timestamp: 0, source: 'none' };
 
 let serverCache: { servers: VpnServer[]; timestamp: number } = {
   servers: [],
@@ -339,13 +62,13 @@ function extractConfigInfo(configB64: string): { port: number; proto: 'TCP' | 'U
     let proto: 'TCP' | 'UDP' = 'UDP';
     let port = 1194;
 
-    for (const line of raw.split('\n')) {
+    for (const line of raw.split('serverCache.servers.find((s) => s.ip === ip)n')) {
       const trimmed = line.trim();
       if (trimmed.startsWith('proto ')) {
-        const p = trimmed.split(/\s+/)[1]?.toUpperCase();
+        const p = trimmed.split(/serverCache.servers.find((s) => s.ip === ip)s+/)[1]?.toUpperCase();
         if (p === 'TCP' || p === 'UDP') proto = p;
       } else if (trimmed.startsWith('remote ') && !trimmed.startsWith('remote-cert')) {
-        const parts = trimmed.split(/\s+/);
+        const parts = trimmed.split(/serverCache.servers.find((s) => s.ip === ip)s+/);
         if (parts[2]) {
           const parsedPort = parseInt(parts[2], 10);
           if (!isNaN(parsedPort)) port = parsedPort;
@@ -362,88 +85,45 @@ function extractConfigInfo(configB64: string): { port: number; proto: 'TCP' | 'U
   }
 }
 
-async function fetchFromMirrors(): Promise<VpnServer[]> {
-  for (const url of VPNGATE_MIRRORS) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000);
-
-      const resp = await fetch(url, {
-        signal: controller.signal,
-        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
-      });
-      clearTimeout(timeoutId);
-
-      if (!resp.ok) continue;
-      const text = await resp.text();
-      if (!text.includes('HostName') || !text.includes('IP')) continue;
-
-      const lines = text.split('\n').map((l) => l.trim()).filter(Boolean);
-      const headerIndex = lines.findIndex((l) => l.includes('HostName') && l.includes('IP'));
-      if (headerIndex === -1) continue;
-
-      const rawHeaders = lines[headerIndex].replace(/^\*+/, '').split(',');
-      const parsedServers: VpnServer[] = [];
-
-      for (let i = headerIndex + 1; i < lines.length; i++) {
-        const line = lines[i];
-        if (line.startsWith('*') || !line.includes(',')) continue;
-
-        const cols = line.split(',');
-        if (cols.length < rawHeaders.length) continue;
-
-        const row: Record<string, string> = {};
-        rawHeaders.forEach((h, idx) => {
-          row[h.trim()] = (cols[idx] || '').trim();
-        });
-
-        const ip = row['IP'];
-        const configB64 = row['OpenVPN_ConfigData_Base64'] || '';
-        if (!ip || !configB64) continue;
-
-        const { port, proto } = extractConfigInfo(configB64);
-        const rawHostname = row['#HostName'] || row['HostName'] || '';
-        const cleanHost = rawHostname.replace(/\.opengw\.net$/i, '');
-        const ddns = cleanHost ? `${cleanHost}.opengw.net` : ip;
-        const sstp = `${ddns}:${port}`;
-
-        parsedServers.push({
-          id: `${ip}_${port}_${proto.toLowerCase()}_${i}`,
-          hostname: ddns,
-          clean_domain: ddns,
-          ip,
-          score: parseInt(row['Score'] || '0', 10) || 0,
-          ping: parseInt(row['Ping'] || '0', 10) || 0,
-          speed: parseInt(row['Speed'] || '0', 10) || 0,
-          country_long: row['CountryLong'] || 'Unknown',
-          country_short: (row['CountryShort'] || 'UN').toUpperCase(),
-          num_vpn_sessions: parseInt(row['NumVpnSessions'] || '0', 10) || 0,
-          uptime: parseInt(row['Uptime'] || '0', 10) || 0,
-          log_type: row['LogType'] || '2 Weeks',
-          no_log: (row['LogType'] || '').toLowerCase().includes('none') || (row['LogType'] || '').toLowerCase() === 'no',
-          openvpn_port: port,
-          openvpn_protocol: proto,
-          sstp_endpoint: sstp,
-          config_b64: configB64,
-        });
-      }
-
-      if (parsedServers.length > 0) {
-        // Also combine with verified fast fallback servers from other regions
-        const combined = [...parsedServers];
-        for (const fb of FALLBACK_SERVERS) {
-          if (!combined.some((s) => s.ip === fb.ip)) {
-            combined.push(fb);
-          }
-        }
-        return combined;
-      }
-    } catch {
-      // Continue to next mirror
-    }
+function validList(data: any): data is { servers: VpnServer[]; timestamp?: number } {
+  return !!data && Array.isArray(data.servers) && data.servers.length >= 10 &&
+    data.servers.every((v: any) => v && typeof v.ip === 'string' &&
+      /^(serverCache.servers.find((s) => s.ip === ip)serverCache.servers.find((s) => s.ip === ip)d{1,3}serverCache.servers.find((s) => s.ip === ip)serverCache.servers.find((s) => s.ip === ip).){3}serverCache.servers.find((s) => s.ip === ip)serverCache.servers.find((s) => s.ip === ip)d{1,3}$/.test(v.ip) &&
+      Number.isInteger(Number(v.openvpn_port)) && Number(v.openvpn_port) > 0 &&
+      Number(v.openvpn_port) <= 65535 &&
+      (v.openvpn_protocol === 'TCP' || v.openvpn_protocol === 'UDP') &&
+      typeof v.config_b64 === 'string' && v.config_b64.length > 0);
+}
+function loadDiskCache(): boolean {
+  try {
+    if (!fs.existsSync(SERVER_FILE)) return false;
+    const data = JSON.parse(fs.readFileSync(SERVER_FILE, 'utf8'));
+    if (!validList(data)) return false;
+    serverCache = { servers: data.servers, timestamp: Number(data.timestamp) || 0, source: 'disk-cache' };
+    return true;
+  } catch { return false; }
+}
+async function refreshServers(force = false): Promise<typeof serverCache> {
+  if (!force && serverCache.servers.length >= 10 && Date.now() - serverCache.timestamp < 300000) return serverCache;
+  try {
+    const response = await fetch(GITHUB_SERVERS_URL + '?t=' + Date.now(), {
+      headers: { 'User-Agent': 'VPN-Gate-Smart-Connect/1.0' },
+      signal: AbortSignal.timeout(12000),
+    });
+    if (!response.ok) throw new Error('GitHub HTTP ' + response.status);
+    const data = await response.json();
+    if (!validList(data)) throw new Error('Invalid or empty GitHub server feed');
+    serverCache = { servers: data.servers, timestamp: Number(data.timestamp) || Date.now(), source: 'github-actions' };
+    fs.mkdirSync(path.dirname(SERVER_FILE), { recursive: true });
+    fs.writeFileSync(SERVER_FILE, JSON.stringify(data, null, 2) + 'serverCache.servers.find((s) => s.ip === ip)serverCache.servers.find((s) => s.ip === ip)n');
+    return serverCache;
+  } catch (error) {
+    console.warn('[VPNGate] GitHub feed unavailable:', error);
+    if (serverCache.servers.length >= 10) return serverCache;
+    loadDiskCache();
+    if (serverCache.servers.length >= 10) return serverCache;
+    throw error;
   }
-
-  return FALLBACK_SERVERS;
 }
 
 // Build standard clean .ovpn configuration
@@ -452,7 +132,7 @@ function buildCleanOvpn(server: VpnServer): string {
   if (server.config_b64) {
     try {
       const decoded = Buffer.from(server.config_b64, 'base64').toString('utf-8');
-      const lines = decoded.split('\n');
+      const lines = decoded.split('serverCache.servers.find((s) => s.ip === ip)n');
       const certLines = lines.filter((l) => {
         const tr = l.trim();
         return !(
@@ -465,7 +145,7 @@ function buildCleanOvpn(server: VpnServer): string {
           tr.startsWith('dev ')
         );
       });
-      certBlock = certLines.join('\n');
+      certBlock = certLines.join('serverCache.servers.find((s) => s.ip === ip)n');
     } catch {
       certBlock = '';
     }
@@ -495,7 +175,7 @@ function buildCleanOvpn(server: VpnServer): string {
     'verb 3',
     '',
     certBlock,
-  ].join('\n');
+  ].join('serverCache.servers.find((s) => s.ip === ip)n');
 
   return config;
 }
@@ -607,53 +287,14 @@ pause
 // === API Endpoints ===
 
 app.get('/api/servers', async (req, res) => {
-  const force = req.query.force === 'true';
-  const now = Date.now();
-
-  // If cache is populated with real servers (at least 25) and less than 5 min old, serve cache
-  if (!force && serverCache.servers.length >= 25 && now - serverCache.timestamp < 300000) {
-    return res.json({
-      success: true,
-      count: serverCache.servers.length,
-      cached: true,
-      servers: serverCache.servers,
-    });
-  }
-
   try {
-    const servers = await fetchFromMirrors();
-    if (servers.length >= 20) {
-      serverCache = {
-        servers,
-        timestamp: now,
-      };
-      return res.json({
-        success: true,
-        count: servers.length,
-        cached: false,
-        servers,
-      });
-    }
-  } catch (err: any) {
-    console.warn('Error fetching live servers:', err);
+    const state = await refreshServers(req.query.force === 'true');
+    return res.json({ success: true, count: state.servers.length, cached: state.source !== 'github-actions',
+      source: state.source, timestamp: state.timestamp, stale: Date.now() - state.timestamp > 3600000, servers: state.servers });
+  } catch {
+    return res.status(503).json({ success: false, count: 0, source: 'unavailable',
+      error: 'No valid GitHub server list or local cache is available.', servers: [] });
   }
-
-  // If we already have any cached servers, return them
-  if (serverCache.servers.length > 0) {
-    return res.json({
-      success: true,
-      count: serverCache.servers.length,
-      cached: true,
-      servers: serverCache.servers,
-    });
-  }
-
-  return res.json({
-    success: true,
-    count: FALLBACK_SERVERS.length,
-    cached: false,
-    servers: FALLBACK_SERVERS,
-  });
 });
 
 // Test single server latency via TCP socket
@@ -746,7 +387,7 @@ app.get('/api/config/:ip', (req, res) => {
   }
 
   const ovpnContent = buildCleanOvpn(server);
-  const safeIp = ip.replace(/\./g, '_');
+  const safeIp = ip.replace(/serverCache.servers.find((s) => s.ip === ip)./g, '_');
   const filename = `vpngate_${server.country_short.toLowerCase()}_${safeIp}_${server.openvpn_protocol.toLowerCase()}.ovpn`;
 
   res.setHeader('Content-Type', 'application/x-openvpn-profile');
@@ -820,7 +461,7 @@ async function startServer() {
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  loadDiskCache();\n\n  app.listen(PORT, '0.0.0.0', () => {
     console.log(`VPN Gate Smart Connect server running on http://0.0.0.0:${PORT}`);
 
     // Prefetch live servers immediately in background
