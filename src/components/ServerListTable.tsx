@@ -61,7 +61,7 @@ export const ServerListTable: React.FC<ServerListTableProps> = ({
     if (protocolFilter !== 'all' && s.openvpn_protocol !== protocolFilter) {
       return false;
     }
-    if (statusFilter === 'online' && s.testedStatus !== 'online' && !s.ping) {
+    if (statusFilter === 'online' && s.testedStatus !== 'online') {
       return false;
     }
     if (statusFilter === 'high_speed' && s.speed < 50000000) {
