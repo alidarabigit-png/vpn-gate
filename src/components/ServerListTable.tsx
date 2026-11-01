@@ -97,7 +97,7 @@ export const ServerListTable: React.FC<ServerListTableProps> = ({
             </span>
             {onlineCount > 0 && (
               <span className="rounded-full bg-emerald-500/20 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-mono text-emerald-300">
-                {onlineCount} آنلاین
+                {onlineCount} پورت قابل دسترس
               </span>
             )}
           </div>
