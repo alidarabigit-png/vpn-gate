@@ -138,51 +138,19 @@ export function generateAppleMobileConfig(server: VpnServer): string {
  * Generate Clean OpenVPN (.ovpn) Configuration
  */
 export function generateCleanOvpn(server: VpnServer): string {
-  let certBlock = '';
-  if (server.config_b64) {
-    try {
-      const decoded = atob(server.config_b64);
-      const lines = decoded.split('\n');
-      const certLines = lines.filter((l) => {
-        const tr = l.trim();
-        return !(
-          tr.startsWith('proto ') ||
-          tr.startsWith('remote ') ||
-          tr.startsWith('redirect-gateway') ||
-          tr.startsWith('dhcp-option') ||
-          tr.startsWith('data-ciphers') ||
-          tr.startsWith('client') ||
-          tr.startsWith('dev ')
-        );
-      });
-      certBlock = certLines.join('\n');
-    } catch {
-      certBlock = '';
-    }
+  if (!server.config_b64) {
+    throw new Error('The original VPN Gate OpenVPN profile is unavailable for this server.');
   }
 
-  const proto = (server.openvpn_protocol || 'TCP').toLowerCase();
-  const remoteHost = server.clean_domain || server.ip;
-  const port = server.openvpn_port || 443;
-
-  return `# VPN Gate Clean OpenVPN Profile
-# Generated for maximum censorship resistance
-client
-dev tun
-proto ${proto}
-remote ${remoteHost} ${port}
-resolv-retry infinite
-nobind
-persist-key
-persist-tun
-redirect-gateway def1
-dhcp-option DNS 1.1.1.1
-dhcp-option DNS 8.8.8.8
-auth-user-pass
-data-ciphers AES-256-GCM:AES-128-GCM:CHACHA20-POLY1305:AES-128-CBC
-data-ciphers-fallback AES-128-CBC
-verb 3
-
-${certBlock}
-`;
+  try {
+    // Keep the provider-supplied profile intact: directives, certificates and keys are significant.
+    const decoded = atob(server.config_b64);
+    if (!/^\s*client\s*$/m.test(decoded) || !/^\s*remote\s+/m.test(decoded)) {
+      throw new Error('The supplied profile is not a valid client OpenVPN configuration.');
+    }
+    return decoded.endsWith('\n') ? decoded : decoded + '\n';
+  } catch (error) {
+    console.error('OpenVPN profile decode failed:', error);
+    throw new Error('Could not decode the original OpenVPN profile.');
+  }
 }
