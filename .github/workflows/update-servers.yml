@@ -60,8 +60,8 @@ jobs:
             let headers = [];
             const servers = [];
             for (const line of lines) {
-              if (line.startsWith('*') && line.includes('HostName')) {
-                headers = line.replace(/^\*+/, '').split(',').map(s => s.trim());
+              if (line.includes('HostName') && /(^|,)IP(,|$)/.test(line)) {
+                headers = line.replace(/^[*#]+/, '').split(',').map(s => s.trim());
                 continue;
               }
               if (!headers.length || line.startsWith('*') || !line.includes(',')) continue;
