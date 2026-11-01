@@ -11,7 +11,6 @@ import { QuickConnectModal } from './components/QuickConnectModal';
 import { VpnServer } from './types/vpn';
 import {
   downloadClientBlob,
-  generateCleanOvpn,
 } from './utils/vpnGenerators';
 import {
   fetchServersSmart,
@@ -19,7 +18,6 @@ import {
 } from './utils/vpnClientFetcher';
 import {
   sortServersByL2tpQuality,
-  evaluateAllServersForL2tp,
 } from './utils/l2tpQuality';
 import { Shield } from 'lucide-react';
 
@@ -112,57 +110,57 @@ export default function App() {
     showToast(`🔄 آیپی سرور بعدی کپی شد: ${nextServer.country_short} (${nextServer.ip})`);
   };
 
-  // Run test on a single server without false-positive offline marking
+  // A TCP port check is only a reachability check, not proof of a successful VPN connection.
   const handleTestSingle = async (server: VpnServer) => {
-    setServers((prev) =>
-      prev.map((s) => (isSameServer(s, server) ? { ...s, testedStatus: 'testing' } : s))
-    );
-
-    // Fast check: positive readiness
-    setTimeout(() => {
-      const calibratedLatency = server.ping > 0 ? server.ping : 38;
-      const updated: VpnServer = {
-        ...server,
-        testedStatus: 'online',
-        testedLatency: calibratedLatency,
-      };
-
-      setServers((prev) =>
-        prev.map((s) => (isSameServer(s, server) ? updated : s))
-      );
-      showToast(`سرور ${server.country_short} آماده اتصال L2TP (پینگ: ${calibratedLatency}ms)`);
-    }, 400);
+    setServers((prev) => prev.map((s) =>
+      isSameServer(s, server) ? { ...s, testedStatus: 'testing' } : s
+    ));
+    try {
+      const response = await fetch('/api/test-server?ip=' + encodeURIComponent(server.ip) + '&port=' + server.openvpn_port);
+      if (!response.ok) throw new Error('Real TCP test requires the local backend.');
+      const result = await response.json();
+      setServers((prev) => prev.map((s) => isSameServer(s, server) ? {
+        ...s,
+        testedStatus: result.reachable ? 'online' : 'offline',
+        testedLatency: result.reachable ? result.latency : undefined,
+      } : s));
+      showToast(result.reachable
+        ? 'پورت TCP سرور قابل دسترس است؛ اتصال VPN هنوز تأیید نشده است.'
+        : 'پورت سرور از این مسیر قابل دسترس نیست.');
+    } catch {
+      setServers((prev) => prev.map((s) => isSameServer(s, server)
+        ? { ...s, testedStatus: 'untested', testedLatency: undefined } : s));
+      showToast('تست واقعی TCP در نسخهٔ میزبانی‌شده در دسترس نیست؛ Backend محلی لازم است.');
+    }
   };
 
-  // Smart L2TP Quality Evaluation across ALL 110+ servers
-  // Never marks servers as "غيرقابل دسترس" due to browser blocked VPN ports
   const handleBulkTest = async () => {
     if (isTestingBulk || servers.length === 0) return;
     setIsTestingBulk(true);
-    setTestProgressText('شروع ارزیابی هوشمند کیفیت سرورها...');
-    showToast('آغاز ارزیابی کیفیت L2TP تمام سرورها...');
-
+    setTestProgressText('در حال بررسی دسترسی TCP سرورها...');
     try {
-      const evaluated = await evaluateAllServersForL2tp(
-        servers,
-        'mci',
-        (testedCount, totalCount, currentServer) => {
-          setTestProgressText(`ارزیابی ${testedCount} از ${totalCount} سرور (${currentServer.country_short})...`);
-        }
-      );
-
+      const response = await fetch('/api/test-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          targets: servers.map((server) => ({ ip: server.ip, port: server.openvpn_port })),
+        }),
+      });
+      if (!response.ok) throw new Error('Backend TCP test unavailable');
+      const data = await response.json();
+      const evaluated = servers.map((server) => {
+        const result = data.results?.[server.ip + ':' + server.openvpn_port];
+        return {
+          ...server,
+          testedStatus: result ? (result.reachable ? 'online' : 'offline') : 'untested',
+          testedLatency: result?.reachable ? result.latency : undefined,
+        } as VpnServer;
+      });
       setServers(evaluated);
-      if (evaluated.length > 0) {
-        // Guarantee top server is fastest Japan/Korea server
-        const topServer = evaluated[0];
-        setSelectedBestServer(topServer);
-        if (quickConnectServer) {
-          setQuickConnectServer(topServer);
-        }
-      }
-      showToast('✅ ارزیابی تمام سرورها کامل شد. سرور برتر ژاپن/کره آماده اتصال انتخاب شد.');
-    } catch (e) {
-      console.error('Error evaluating servers:', e);
+      const reachable = evaluated.filter((server) => server.testedStatus === 'online').length;
+      showToast('بررسی TCP تمام شد: ' + reachable + ' پورت قابل دسترس؛ این نتیجه تضمین اتصال VPN نیست.');
+    } catch {
+      showToast('تست گروهی واقعی به Backend محلی نیاز دارد؛ در سایت ایستا قابل اجرا نیست.');
     } finally {
       setIsTestingBulk(false);
       setTestProgressText(null);
@@ -177,9 +175,10 @@ export default function App() {
       await navigator.clipboard.writeText(text);
       showToast('✅ کانفیگ کپی شد! در v2rayNG دکمه Import from Clipboard را بزنید.');
     } catch {
-      const fallbackText = generateCleanOvpn(server);
-      await navigator.clipboard.writeText(fallbackText);
-      showToast('✅ متن کانفیگ کپی شد!');
+      if (!server.config_b64) throw new Error('OpenVPN profile unavailable');
+      const originalProfile = atob(server.config_b64);
+      await navigator.clipboard.writeText(originalProfile);
+      showToast('متن پروفایل اصلی OpenVPN کپی شد.');
     }
   };
 
@@ -192,7 +191,8 @@ export default function App() {
       } catch {}
 
       if (!text) {
-        text = generateCleanOvpn(server);
+        if (!server.config_b64) throw new Error('OpenVPN profile unavailable');
+        text = atob(server.config_b64);
       }
 
       const filename = `vpngate_${server.country_short.toLowerCase()}_${server.ip.replace(/\./g, '_')}.ovpn`;
