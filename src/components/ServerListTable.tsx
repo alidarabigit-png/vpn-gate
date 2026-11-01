@@ -16,11 +16,6 @@ import {
   Activity,
 } from 'lucide-react';
 import { VpnServer } from '../types/vpn';
-import {
-  downloadClientBlob,
-  generateWindowsBat,
-  generateAppleMobileConfig,
-} from '../utils/vpnGenerators';
 
 interface ServerListTableProps {
   servers: VpnServer[];
@@ -95,7 +90,7 @@ export const ServerListTable: React.FC<ServerListTableProps> = ({
           <div className="flex items-center gap-3">
             <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
               <Globe className="h-5 w-5 text-emerald-400" />
-              داشبورد سرورهای زنده و پایدار
+              فهرست سرورهای VPN Gate
             </h2>
             <span className="rounded-full bg-slate-800 px-2.5 py-0.5 text-xs font-mono text-slate-300">
               {servers.length} سرور فعال
@@ -107,7 +102,7 @@ export const ServerListTable: React.FC<ServerListTableProps> = ({
             )}
           </div>
           <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            مشاهده، پایش پینگ زنده و انتخاب مستقیم هر سرور برای دکمه پاور با ۱ کلیک
+            اطلاعات سرورها از فهرست به‌روزشده VPN Gate؛ تست TCP فقط دسترسی پورت را می‌سنجد.
           </p>
         </div>
 
@@ -201,7 +196,7 @@ export const ServerListTable: React.FC<ServerListTableProps> = ({
                   : 'text-slate-400 hover:text-slate-200'
               }`}
             >
-              آماده اتصال (L2TP)
+              پورت TCP قابل دسترس
             </button>
             <button
               onClick={() => setStatusFilter('high_speed')}
@@ -378,38 +373,6 @@ export const ServerListTable: React.FC<ServerListTableProps> = ({
                             <Copy className="h-3.5 w-3.5" />
                           </button>
                         )}
-
-                        {/* Windows 1-Click Script */}
-                        <button
-                          onClick={() => {
-                            const bat = generateWindowsBat(server);
-                            downloadClientBlob(
-                              bat,
-                              `connect_vpngate_${server.country_short.toLowerCase()}.bat`,
-                              'application/x-bat;charset=utf-8'
-                            );
-                          }}
-                          title="دانلود اسکریپت اتصال ویندوز (.bat)"
-                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-slate-300 hover:bg-emerald-500 hover:text-slate-950 transition-colors cursor-pointer"
-                        >
-                          <Laptop className="h-3.5 w-3.5" />
-                        </button>
-
-                        {/* Apple MobileConfig */}
-                        <button
-                          onClick={() => {
-                            const cfg = generateAppleMobileConfig(server);
-                            downloadClientBlob(
-                              cfg,
-                              `vpngate_${server.country_short.toLowerCase()}.mobileconfig`,
-                              'application/x-apple-aspen-config;charset=utf-8'
-                            );
-                          }}
-                          title="پروفایل خودکار آیفون (.mobileconfig)"
-                          className="flex h-7 w-7 items-center justify-center rounded-lg bg-slate-800 text-slate-300 hover:bg-emerald-500 hover:text-slate-950 transition-colors cursor-pointer"
-                        >
-                          <Apple className="h-3.5 w-3.5" />
-                        </button>
 
                         {/* Download .ovpn */}
                         <button
