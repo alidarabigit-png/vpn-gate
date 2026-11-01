@@ -20,7 +20,6 @@ import { VpnServer, PlatformType } from '../types/vpn';
 import {
   downloadClientBlob,
   generateCleanOvpn,
-  generateCleanOvpn,
 } from '../utils/vpnGenerators';
 
 interface QuickConnectModalProps {
