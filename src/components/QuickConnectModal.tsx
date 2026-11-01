@@ -55,11 +55,11 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
   };
 
   const handleDownloadAppleProfile = () => {
-    onShowToast('این سرور فقط پروفایل OpenVPN ارائه می‌کند؛ پروفایل L2TP آیفون با آن سازگار نیست.');
+    onShowToast('برای آیفون از Settings بخش VPN، نوع L2TP را انتخاب و آدرس هاست، Account، Password و Secret را وارد کنید. نصب خودکار پروفایل در این نسخه ارائه نمی‌شود.');
   };
 
   const handleDownloadWindowsBat = () => {
-    onShowToast('این سرور SSTP/L2TP نیست؛ برای اتصال ویندوز از OpenVPN Connect و فایل .ovpn استفاده کنید.');
+    onShowToast('برای ویندوز از VPN داخلی Windows و نوع SSTP استفاده کنید. آدرس سرور را به صورت hostname وارد کنید؛ برای نمونه public-vpn-255.opengw.net:443. نام کاربری و رمز عبور vpn است.');
   };
 
   const handleDownloadOvpn = () => {
@@ -79,7 +79,7 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
     }
   };
 
-  const windowsPowerShellCmd = 'این سرور از OpenVPN استفاده می‌کند. فایل .ovpn را در OpenVPN Connect وارد کنید.';
+  const windowsPowerShellCmd = `Server: ${server.clean_domain}:443\nVPN type: SSTP\nUsername: vpn\nPassword: vpn`;
 
   return (
     <div
@@ -107,14 +107,14 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-bold text-white">
-                  اتصال به سرور VPN Gate (OpenVPN)
+                  روش‌های اتصال به سرور VPN Gate
                 </h2>
                 <span className="inline-flex items-center rounded-md bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300 border border-emerald-500/30">
                   {server.country_short} {server.country_long}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1">
-                این سرورها پروفایل OpenVPN ارائه می‌کنند؛ اتصال به پشتیبانی شبکه و اپراتور بستگی دارد.
+                روش اتصال را متناسب با دستگاه انتخاب کنید. پشتیبانی هر پروتکل باید روی همان سرور بررسی شود.
               </p>
             </div>
           </div>
@@ -136,7 +136,7 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
         <div className="mb-5 rounded-xl bg-emerald-500/10 border border-emerald-500/30 p-3 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2 text-emerald-300 font-medium">
             <Sparkles className="h-4 w-4 text-emerald-400 animate-pulse shrink-0" />
-            <span>آیپی سرور در حافظه کلیپ‌بورد کپی شد:</span>
+            <span>آدرس سرور در حافظه کلیپ‌بورد کپی شد:</span>
             <code className="font-mono bg-slate-950 px-2 py-0.5 rounded text-emerald-300 font-bold" dir="ltr">
               {server.ip}
             </code>
@@ -202,13 +202,13 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
                 {/* IP Field */}
                 <div className="flex items-center justify-between rounded-lg bg-slate-900 px-3 py-2.5 border border-slate-800 text-xs">
                   <div className="flex items-center gap-2">
-                    <span className="text-slate-400">آدرس سرور (Server IP):</span>
+                    <span className="text-slate-400">آدرس سرور (Hostname):</span>
                     <strong className="font-mono text-emerald-400 text-sm" dir="ltr">
                       {server.ip}
                     </strong>
                   </div>
                   <button
-                    onClick={() => copyToClipboard(server.ip, 'ip', 'آیپی سرور')}
+                    onClick={() => copyToClipboard(server.clean_domain, 'ip', 'آدرس سرور')}
                     className="flex items-center gap-1 text-emerald-400 hover:text-emerald-300 transition-colors cursor-pointer font-bold"
                   >
                     {copiedField === 'ip' ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
@@ -285,22 +285,21 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
               <div className="flex items-center justify-between mb-2">
                 <span className="font-bold text-emerald-300 text-xs sm:text-sm flex items-center gap-1.5">
                   <Apple className="h-4 w-4" />
-                  ویژه آیفون: نصب خودکار پروفایل L2TP (بدون تایپ دستی)
+                  تنظیم دستی L2TP/IPsec در آیفون
                 </span>
                 <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
                   سریع‌ترین روش iOS
                 </span>
               </div>
               <p className="text-xs text-slate-300 mb-3 leading-relaxed">
-                با زدن دکمه زیر، فایل کانفیگ اختصاصی اپل تولید شده و در سافاری دانلود می‌شود. سپس به{' '}
-                <strong className="text-white">Settings &gt; Profile Downloaded</strong> رفته و Install را بزنید تا VPN فوراً آماده اتصال شود.
+                در تنظیمات آیفون به Settings &gt; VPN بروید، نوع L2TP را انتخاب کنید و مشخصات سرور را وارد نمایید. فایل نصب خودکار در این نسخه تولید نمی‌شود.
               </p>
               <button
-                onClick={handleDownloadAppleProfile}
+                onClick={() => copyToClipboard(server.clean_domain, 'ios_host', 'آدرس سرور')}
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-500 py-2.5 px-4 text-xs font-bold text-slate-950 hover:bg-emerald-400 transition-colors cursor-pointer shadow-md shadow-emerald-500/20"
               >
                 <Download className="h-4 w-4" />
-                <span>نصب خودکار پروفایل L2TP در آیفون (.mobileconfig)</span>
+                <span>کپی آدرس سرور برای آیفون</span>
               </button>
             </div>
 
@@ -325,10 +324,10 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
                   به <strong className="text-white">Settings &gt; Connections &gt; More connection settings &gt; VPN</strong> بروید (یا در تنظیمات کلمه VPN را جستجو کنید).
                 </li>
                 <li>
-                  دکمه <strong className="text-emerald-400">Add VPN (+)</strong> را بزنید، نام را <code className="font-mono bg-slate-900 px-1 text-emerald-300">VPNGate</code> و نوع را روی <strong className="text-white">L2TP/IPSec PSK</strong> تنظیم کنید.
+                  دکمه <strong className="text-emerald-400">Add VPN (+)</strong> را بزنید، نام را <code className="font-mono bg-slate-900 px-1 text-emerald-300">VPNGate</code> و در برنامه L2TP VPN Client گزینه <strong className="text-white">L2TP/IPsec</strong> را انتخاب کنید.
                 </li>
                 <li>
-                  در فیلد <strong className="text-white">Server address</strong>، آیپی سرور (<code className="font-mono text-emerald-400" dir="ltr">{server.ip}</code>) را پیست کنید و در سه فیلد IPSec secret، Username و Password کلمه <code className="font-mono text-emerald-400">vpn</code> را بنویسید و ذخیره را بزنید!
+                  در فیلد <strong className="text-white">Server address</strong>، هاست سرور (<code className="font-mono text-emerald-400" dir="ltr">{server.clean_domain}</code>) را پیست کنید و در فیلدهای Secret، Username و Password کلمه <code className="font-mono text-emerald-400">vpn</code> را بنویسید و ذخیره را بزنید!
                 </li>
               </ol>
             </div>
@@ -341,24 +340,24 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
             <div className="rounded-xl bg-slate-950 p-4 border border-slate-800">
               <span className="font-bold text-emerald-400 flex items-center gap-1.5 text-sm mb-2">
                 <Laptop className="h-4 w-4" />
-                اتصال خودکار ویندوز با ۱ کلیک:
+                اتصال با VPN داخلی ویندوز (SSTP):
               </span>
               <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                یک اسکریپت سبک و ایمن ویندوز که به صورت خودکار کانکشن رسمی L2TP/IPSec ویندوز را ایجاد کرده و بدون نیاز به نصب هیچ نرم‌افزار جانبی متصل می‌شود:
+                در Windows 11 از Settings &gt; Network & Internet &gt; VPN گزینه Add VPN را بزنید و VPN type را روی SSTP قرار دهید. سرور را به صورت hostname وارد کنید:
               </p>
 
               <button
-                onClick={handleDownloadWindowsBat}
+                onClick={() => copyToClipboard(server.clean_domain + ':443', 'win_host', 'آدرس SSTP')
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 px-4 text-xs font-bold text-slate-950 hover:bg-emerald-400 transition-colors cursor-pointer shadow-md shadow-emerald-500/20 mb-3"
               >
                 <Download className="h-4 w-4" />
-                <span>دانلود فایل اسکریپت ۱-کلیکی ویندوز (.bat)</span>
+                <span>کپی آدرس سرور ویندوز</span>
               </button>
 
               <div className="rounded-lg bg-slate-900/90 p-3 border border-slate-800 text-[11px] text-slate-300 space-y-1.5">
-                <p>۱. پس از دانلود، روی فایل <strong className="text-white font-mono">connect_l2tp_vpngate.bat</strong> راست‌کلیک کنید.</p>
-                <p>۲. گزینه <strong className="text-emerald-300">Run as administrator</strong> را انتخاب نمایید.</p>
-                <p>۳. ویندوز با آیپی <span className="font-mono text-emerald-400" dir="ltr">{server.ip}</span> مستقیماً متصل خواهد شد.</p>
+                <p>۱. نام سرور: <span dir="ltr" className="font-mono text-emerald-400">{server.clean_domain}:443</span></p>
+                <p>۲. نوع VPN: <strong className="text-emerald-300">SSTP</strong></p>
+                <p>۳. نام کاربری و رمز عبور: <strong className="text-emerald-300">vpn</strong></p>
               </div>
             </div>
 
@@ -392,7 +391,7 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
               <AlertTriangle className="h-5 w-5 shrink-0 text-amber-400 mt-0.5" />
               <div>
                 <strong className="block font-bold text-amber-300 mb-1">هشدار مسدود بودن OpenVPN در اینترنت ایران:</strong>
-                پروتکل OpenVPN (.ovpn) بر روی اکثر اپراتورها (همراه اول، ایرانسل، رایتل و مخابرات) با فیلترینگ هوشمند DPI مسدود شده و معمولاً متصل نمی‌شود. اکیداً پیشنهاد می‌شود از <strong>تب ۱ (اتصال مستقیم L2TP/IPSec)</strong> استفاده کنید که بدون فیلترشکن و به صورت بومی در گوشی کار می‌کند.
+                موفقیت اتصال به سرور، شبکه و پروتکل بستگی دارد. TCP قابل دسترس بودن پورت را نشان می‌دهد و تضمین‌کننده اتصال VPN نیست.
               </div>
             </div>
 
@@ -402,7 +401,7 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
                 <span className="font-bold text-white text-sm">دانلود و استفاده از کانفیگ OpenVPN</span>
               </div>
               <p className="text-xs text-slate-300 leading-relaxed mb-4">
-                کانفیگ اصلاح‌شده با رمزنگاری‌های جدید (AES-128-CBC و CHACHA20) جهت مقاومت در برابر فیلترینگ تولید شده است. مناسب برای نرم‌افزارهای OpenVPN Connect، v2rayNG و Sing-box:
+                فایل اصلی OpenVPN ارائه‌شده توسط VPN Gate دانلود می‌شود؛ محتوای آن بدون دستکاری حفظ می‌شود.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
