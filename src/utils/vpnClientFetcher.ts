@@ -1,6 +1,6 @@
 import { VpnServer } from '../types/vpn';
 
-const GITHUB_SERVERS_URL = 'https://raw.githubusercontent.com/alidarabigit-png/vpn-gate/main/public/servers.json';
+const GITHUB_SERVERS_URL = 'https://raw.githubusercontent.com/alidarabigit-png/vpn-gate/fix/github-server-feed/public/servers.json';
 const LOCAL_STORAGE_KEY = 'vpngate_cached_servers_v3';
 
 export interface FetchResult {
