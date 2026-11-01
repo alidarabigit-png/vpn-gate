@@ -19,8 +19,7 @@ import {
 import { VpnServer, PlatformType } from '../types/vpn';
 import {
   downloadClientBlob,
-  generateWindowsBat,
-  generateAppleMobileConfig,
+  generateCleanOvpn,
   generateCleanOvpn,
 } from '../utils/vpnGenerators';
 
@@ -42,7 +41,7 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
   onNextServer,
 }) => {
   const [activeTab, setActiveTab] = useState<'l2tp' | 'windows' | 'ovpn'>(
-    initialPlatform === 'windows' ? 'windows' : 'l2tp'
+    'ovpn'
   );
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
@@ -58,21 +57,11 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
   };
 
   const handleDownloadAppleProfile = () => {
-    const xml = generateAppleMobileConfig(server);
-    const filename = `vpngate_l2tp_${server.country_short.toLowerCase()}_${server.ip.replace(/\./g, '_')}.mobileconfig`;
-    const ok = downloadClientBlob(xml, filename, 'application/x-apple-aspen-config;charset=utf-8');
-    if (ok) {
-      onShowToast('✅ پروفایل L2TP آیفون دانلود شد. به Settings > Profile بروید.');
-    }
+    onShowToast('این سرور فقط پروفایل OpenVPN ارائه می‌کند؛ پروفایل L2TP آیفون با آن سازگار نیست.');
   };
 
   const handleDownloadWindowsBat = () => {
-    const bat = generateWindowsBat(server);
-    const filename = `connect_l2tp_vpngate_${server.country_short.toLowerCase()}.bat`;
-    const ok = downloadClientBlob(bat, filename, 'application/x-bat;charset=utf-8');
-    if (ok) {
-      onShowToast('✅ اسکریپت ویندوز دانلود شد. با Run as Administrator اجرا کنید.');
-    }
+    onShowToast('این سرور SSTP/L2TP نیست؛ برای اتصال ویندوز از OpenVPN Connect و فایل .ovpn استفاده کنید.');
   };
 
   const handleDownloadOvpn = () => {
@@ -92,7 +81,7 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
     }
   };
 
-  const windowsPowerShellCmd = `powershell -NoProfile -ExecutionPolicy Bypass -Command "Add-VpnConnection -Name 'VPNGate' -ServerAddress '${server.ip}' -TunnelType L2tp -L2tpPsk 'vpn' -AuthenticationMethod Pap -Force; rasdial VPNGate vpn vpn"`;
+  const windowsPowerShellCmd = 'این سرور از OpenVPN استفاده می‌کند. فایل .ovpn را در OpenVPN Connect وارد کنید.';
 
   return (
     <div
@@ -120,14 +109,14 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-base sm:text-lg font-bold text-white">
-                  پنجره اتصال مستقیم به سرور (L2TP)
+                  اتصال به سرور VPN Gate (OpenVPN)
                 </h2>
                 <span className="inline-flex items-center rounded-md bg-emerald-500/20 px-2 py-0.5 text-[11px] font-bold text-emerald-300 border border-emerald-500/30">
                   {server.country_short} {server.country_long}
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1">
-                پروتکل L2TP بدون فیلترشکن روی همه شبکه‌ها (همراه اول، ایرانسل و رایتل) متصل می‌شود
+                این سرورها پروفایل OpenVPN ارائه می‌کنند؛ اتصال به پشتیبانی شبکه و اپراتور بستگی دارد.
               </p>
             </div>
           </div>
@@ -174,7 +163,7 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
             }`}
           >
             <Smartphone className="h-4 w-4" />
-            <span className="truncate">اتصال مستقیم L2TP (پیشنهادی)</span>
+            <span className="truncate">راهنمای iOS</span>
           </button>
 
           <button
@@ -186,7 +175,7 @@ export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
             }`}
           >
             <Laptop className="h-4 w-4" />
-            <span className="truncate">اتصال ویندوز (۱-کلیک)</span>
+            <span className="truncate">راهنمای ویندوز</span>
           </button>
 
           <button
