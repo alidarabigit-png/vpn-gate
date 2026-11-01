@@ -19,7 +19,7 @@ function getPort(): number {
 }
 const PORT = getPort();
 
-const GITHUB_SERVERS_URL = 'https://raw.githubusercontent.com/alidarabigit-png/vpn-gate/fix/github-server-feed/public/servers.json';
+const GITHUB_SERVERS_URL = 'https://raw.githubusercontent.com/alidarabigit-png/vpn-gate/main/public/servers.json';
 const SERVER_FILE = path.resolve(__dirname, 'public', 'servers.json');
 
 interface VpnServer {
