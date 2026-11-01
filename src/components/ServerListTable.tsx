@@ -3,8 +3,6 @@ import {
   Search,
   Download,
   QrCode,
-  Laptop,
-  Apple,
   RefreshCw,
   Copy,
   Check,
