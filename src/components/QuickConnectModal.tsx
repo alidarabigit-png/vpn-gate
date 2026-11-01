@@ -34,7 +34,6 @@ interface QuickConnectModalProps {
 
 export const QuickConnectModal: React.FC<QuickConnectModalProps> = ({
   server,
-  initialPlatform = 'android',
   onClose,
   onShowToast,
   onOpenConfigViewer,
